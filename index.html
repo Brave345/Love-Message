@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>For My Sunshine 🌸</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        @keyframes float {
+            0% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(10deg); }
+            100% { transform: translateY(0px) rotate(0deg); }
+        }
+
+        .heart {
+            animation: float 3s ease-in-out infinite;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .bloom {
+            transition: all 2s ease-out;
+        }
+
+        #flowerCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: -1;
+        }
+    </style>
+</head>
+<body class="bg-pink-100 overflow-hidden">
+    <div id="app" class="min-h-screen flex items-center justify-center">
+        <canvas id="flowerCanvas"></canvas>
+        
+        <div class="relative z-10 text-center space-y-6 px-4">
+            <div class="space-y-4">
+                <h1 class="text-4xl md:text-6xl font-bold text-rose-600 transform -rotate-3 hover:rotate-3 transition-transform duration-300">
+                    🌸 For My Beautiful {{ girlfriendName }} 🌸
+                </h1>
+                
+                <transition name="fade">
+                    <div v-if="showMessage" class="bg-white/80 backdrop-blur-lg p-6 rounded-lg shadow-xl bloom">
+                        <p class="text-xl md:text-2xl text-gray-700 italic mb-4">
+                            "Each flower petal represents how grateful I am to have you..."
+                        </p>
+                        <div class="text-5xl animate-pulse">💖</div>
+                    </div>
+                </transition>
+            </div>
+
+            <div class="grid grid-cols-3 gap-4">
+                <div v-for="(heart, index) in hearts" :key="index" 
+                     class="heart text-4xl"
+                     :style="heart.style"
+                     @click="removeHeart(index)">
+                    ❤️
+                </div>
+            </div>
+
+            <div class="mt-8 space-y-4">
+                <input v-model="girlfriendName" 
+                       type="text" 
+                       placeholder="Masukkan nama pacarmu" 
+                       class="p-3 rounded-lg border-2 border-rose-300 focus:outline-none focus:border-rose-500 transition-colors">
+                
+                <button @click="showLove" 
+                        class="bg-rose-500 hover:bg-rose-600 text-white px-6 py-3 rounded-full transform hover:scale-110 transition-all duration-300">
+                    💝 Show My Love!
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="butterflyContainer" class="fixed inset-0 pointer-events-none z-20" style="display: none;"></div>
+    <div id="flowerBloom" class="fixed inset-0 pointer-events-none z-10 flex items-center justify-center" style="display: none;">
+        <div class="flower-petals"></div>
+    </div>
+
+    <script>
+        const { createApp } = Vue;
+
+        createApp({
+            data() {
+                return {
+                    girlfriendName: 'Darling',
+                    hearts: [],
+                    showMessage: false,
+                    quotes: [
+                        "You are a dream that became reality...",
+                        "Every second with you is a blessing...", 
+                        "My love for you grows more beautiful each day...",
+                        "You are the most beautiful flower in my heart's garden..."
+                    ],
+                    currentQuote: 0,
+                    butterflies: [],
+                    butterflyScene: null,
+                    butterflyCamera: null,
+                    butterflyRenderer: null
+                }
+            },
+            mounted() {
+                this.initHearts();
+                this.init3DFlower();
+                setTimeout(() => this.showMessage = true, 1000);
+                setInterval(() => {
+                    this.currentQuote = (this.currentQuote + 1) % this.quotes.length;
+                }, 5000);
+            },
+            methods: {
+                initHearts() {
+                    for (let i = 0; i < 9; i++) {
+                        this.hearts.push({
+                            style: {
+                                transform: `rotate(${Math.random() * 360}deg)`,
+                                fontSize: `${Math.random() * 20 + 30}px`,
+                                opacity: Math.random() * 0.5 + 0.5
+                            }
+                        });
+                    }
+                },
+                removeHeart(index) {
+                    this.hearts.splice(index, 1);
+                    if (this.hearts.length === 0) {
+                        this.initHearts();
+                    }
+                },
+                showLove() {
+                    if (this.girlfriendName) {
+                        // Tampilkan efek bunga mekar
+                        this.showFlowerBloom();
+                        
+                        // Tampilkan pesan cinta dengan animasi yang lebih romantis
+                        this.showRomanticMessage();
+                    }
+                },
+                showRomanticMessage() {
+                    // Buat elemen modal yang lebih romantis
+                    const modal = document.createElement('div');
+                    modal.className = 'fixed inset-0 flex items-center justify-center z-50';
+                    
+                    // Background overlay dengan blur
+                    const overlay = document.createElement('div');
+                    overlay.className = 'absolute inset-0 bg-black/30 backdrop-blur-sm';
+                    modal.appendChild(overlay);
+                    
+                    // Container pesan dengan bentuk hati
+                    const messageBox = document.createElement('div');
+                    messageBox.className = 'relative bg-gradient-to-br from-pink-100 to-rose-200 p-8 rounded-2xl shadow-2xl transform transition-all duration-500 z-10';
+                    messageBox.style.maxWidth = '90%';
+                    messageBox.style.width = '400px';
+                    messageBox.style.border = '3px solid #FD6C9E';
+                    messageBox.style.boxShadow = '0 0 30px rgba(255, 105, 180, 0.5)';
+                    
+                    // Tambahkan dekorasi hati di sekitar box
+                    for (let i = 0; i < 8; i++) {
+                        const heart = document.createElement('div');
+                        heart.innerHTML = '❤️';
+                        heart.className = 'absolute text-3xl';
+                        const angle = (i / 8) * Math.PI * 2;
+                        const x = Math.cos(angle) * 180;
+                        const y = Math.sin(angle) * 180;
+                        heart.style.transform = `translate(${x}px, ${y}px)`;
+                        heart.style.animation = `float ${2 + Math.random()}s ease-in-out infinite`;
+                        messageBox.appendChild(heart);
+                    }
+                    
+                    // Judul pesan
+                    const title = document.createElement('h3');
+                    title.className = 'text-2xl font-bold text-rose-600 mb-4 text-center';
+                    title.textContent = '💖 Love Message 💖';
+                    messageBox.appendChild(title);
+                    
+                    // Container untuk teks yang akan dianimasi
+                    const textContainer = document.createElement('div');
+                    textContainer.className = 'text-center text-xl text-rose-800 font-medium min-h-[100px] flex items-center justify-center';
+                    messageBox.appendChild(textContainer);
+                    
+                    // Tombol OK yang lebih cantik
+                    const button = document.createElement('button');
+                    button.className = 'mt-6 bg-rose-500 hover:bg-rose-600 text-white px-8 py-2 rounded-full mx-auto block transition-all hover:scale-105 focus:outline-none';
+                    button.textContent = 'OK';
+                    button.onclick = () => {
+                        modal.classList.add('opacity-0');
+                        setTimeout(() => {
+                            document.body.removeChild(modal);
+                            // Tampilkan kupu-kupu setelah pesan ditutup
+                            this.showEnhancedButterflies();
+                        }, 500);
+                    };
+                    messageBox.appendChild(button);
+                    
+                    modal.appendChild(messageBox);
+                    document.body.appendChild(modal);
+                    
+                    // Animasi masuk
+                    messageBox.style.transform = 'scale(0.5)';
+                    messageBox.style.opacity = '0';
+                    
+                    setTimeout(() => {
+                        messageBox.style.transform = 'scale(1)';
+                        messageBox.style.opacity = '1';
+                    }, 100);
+                    
+                    // Pesan yang akan ditampilkan satu per satu
+                    const messages = [
+                        `${this.girlfriendName}...`,
+                        `You are the true love of my life!`,
+                        `Every beat of my heart beats for you...`,
+                        `I love you with all my heart ❤️`
+                    ];
+                    
+                    // Animasi teks muncul satu per satu
+                    let currentIndex = 0;
+                    
+                    const showNextMessage = () => {
+                        if (currentIndex < messages.length) {
+                            // Bersihkan container dan tambahkan teks baru dengan animasi
+                            textContainer.innerHTML = '';
+                            const messageElement = document.createElement('div');
+                            messageElement.className = 'opacity-0 transform translate-y-4 transition-all duration-500';
+                            messageElement.textContent = messages[currentIndex];
+                            textContainer.appendChild(messageElement);
+                            
+                            setTimeout(() => {
+                                messageElement.classList.remove('opacity-0', 'translate-y-4');
+                            }, 100);
+                            
+                            currentIndex++;
+                            setTimeout(showNextMessage, 1500);
+                        }
+                    };
+                    
+                    // Mulai animasi teks
+                    setTimeout(showNextMessage, 500);
+                },
+                showEnhancedButterflies() {
+                    const container = document.getElementById('butterflyContainer');
+                    container.style.display = 'block';
+                    
+                    if (!this.butterflyScene) {
+                        // Inisialisasi scene kupu-kupu
+                        this.butterflyScene = new THREE.Scene();
+                        this.butterflyCamera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+                        this.butterflyRenderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+                        this.butterflyRenderer.setSize(window.innerWidth, window.innerHeight);
+                        container.appendChild(this.butterflyRenderer.domElement);
+                        
+                        this.butterflyCamera.position.z = 15;
+                        
+                        // Buat lebih banyak kupu-kupu dengan warna yang lebih indah
+                        for (let i = 0; i < 30; i++) {
+                            this.createEnhancedButterfly();
+                        }
+                        
+                        // Animasi kupu-kupu yang lebih halus
+                        const animateButterflies = () => {
+                            if (container.style.display === 'none') return;
+                            
+                            requestAnimationFrame(animateButterflies);
+                            
+                            this.butterflies.forEach(butterfly => {
+                                // Gerakan sayap yang lebih realistis
+                                butterfly.wingLeft.rotation.y = Math.sin(Date.now() * 0.01 + butterfly.index * 0.1) * 0.5;
+                                butterfly.wingRight.rotation.y = -Math.sin(Date.now() * 0.01 + butterfly.index * 0.1) * 0.5;
+                                
+                                // Gerakan terbang yang lebih alami
+                                butterfly.position.x += butterfly.speed.x;
+                                butterfly.position.y += Math.sin(Date.now() * 0.001 + butterfly.index) * 0.01 + butterfly.speed.y;
+                                butterfly.position.z += butterfly.speed.z;
+                                
+                                // Rotasi kupu-kupu yang lebih dinamis
+                                butterfly.rotation.x = Math.sin(Date.now() * 0.0005 + butterfly.index) * 0.1;
+                                butterfly.rotation.y = Math.cos(Date.now() * 0.0007 + butterfly.index) * 0.1;
+                                butterfly.rotation.z = Math.sin(Date.now() * 0.001 + butterfly.index) * 0.2;
+                                
+                                // Reset posisi jika keluar dari layar
+                                if (Math.abs(butterfly.position.x) > 20 || 
+                                    Math.abs(butterfly.position.y) > 20 || 
+                                    Math.abs(butterfly.position.z) > 20) {
+                                    butterfly.position.set(
+                                        (Math.random() - 0.5) * 10,
+                                        (Math.random() - 0.5) * 10,
+                                        (Math.random() - 0.5) * 10
+                                    );
+                                }
+                            });
+                            
+                            // Rotasi kamera untuk efek yang lebih imersif
+                            this.butterflyCamera.position.x = Math.sin(Date.now() * 0.0002) * 2;
+                            this.butterflyCamera.position.y = Math.cos(Date.now() * 0.0002) * 2;
+                            this.butterflyCamera.lookAt(0, 0, 0);
+                            
+                            this.butterflyRenderer.render(this.butterflyScene, this.butterflyCamera);
+                        };
+                        
+                        animateButterflies();
+                    } else {
+                        // Jika scene sudah ada, tambahkan kupu-kupu baru
+                        this.butterflies = [];
+                        this.butterflyScene.clear();
+                        
+                        for (let i = 0; i < 30; i++) {
+                            this.createEnhancedButterfly();
+                        }
+                    }
+                    
+                    // Tampilkan efek lebih lama
+                    setTimeout(() => {
+                        container.style.display = 'none';
+                    }, 15000);
+                },
+                createEnhancedButterfly() {
+                    // Buat kupu-kupu dengan geometri yang lebih detail
+                    const butterfly = new THREE.Group();
+                    
+                    // Warna-warna yang lebih cerah dan bervariasi
+                    const colors = [
+                        0xff1493, // deep pink
+                        0xff69b4, // hot pink
+                        0xffa500, // orange
+                        0xffff00, // yellow
+                        0x00ffff, // cyan
+                        0x9370db, // medium purple
+                        0x7b68ee, // medium slate blue
+                        0x00fa9a  // medium spring green
+                    ];
+                    const color = colors[Math.floor(Math.random() * colors.length)];
+                    
+                    // Buat sayap dengan bentuk yang lebih alami
+                    const wingGeometry = new THREE.BufferGeometry();
+                    const wingShape = new THREE.Shape();
+                    
+                    wingShape.moveTo(0, 0);
+                    wingShape.bezierCurveTo(1, 1.5, 2.5, 1.5, 2.5, 0);
+                    wingShape.bezierCurveTo(2.5, -1.5, 1.5, -2.5, 0, -1.5);
+                    wingShape.bezierCurveTo(-0.5, -0.8, -0.5, -0.5, 0, 0);
+                    
+                    const wingPoints = wingShape.getPoints(50); // Lebih banyak titik untuk bentuk yang lebih halus
+                    const wingVertices = [];
+                    
+                    wingPoints.forEach(point => {
+                        wingVertices.push(point.x, point.y, 0);
+                    });
+                    
+                    wingGeometry.setAttribute('position', new THREE.Float32BufferAttribute(wingVertices, 3));
+                    
+                    // Material sayap dengan efek yang lebih menarik
+                    const wingMaterial = new THREE.MeshBasicMaterial({ 
+                        color: color,
+                        side: THREE.DoubleSide,
+                        transparent: true,
+                        opacity: 0.8
+                    });
+                    
+                    // Sayap kiri dan kanan
+                    const wingLeft = new THREE.Mesh(wingGeometry, wingMaterial);
+                    const wingRight = new THREE.Mesh(wingGeometry, wingMaterial);
+                    
+                    // Ukuran sayap yang bervariasi
+                    const scale = 0.6 + Math.random() * 0.4;
+                    wingLeft.scale.set(scale, scale, scale);
+                    wingRight.scale.set(scale, scale, scale);
+                    
+                    // Posisikan sayap
+                    wingLeft.position.set(-0.1, 0, 0);
+                    wingRight.position.set(0.1, 0, 0);
+                    wingRight.rotation.y = Math.PI;
+                    
+                    // Buat tubuh kupu-kupu yang lebih detail
+                    const bodyGeometry = new THREE.CylinderGeometry(0.05, 0.1, 0.8, 8);
+                    const bodyMaterial = new THREE.MeshBasicMaterial({ color: 0x333333 });
+                    const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+                    body.rotation.x = Math.PI / 2;
+                    
+                    // Tambahkan antena
+                    const antennaGeometry = new THREE.CylinderGeometry(0.01, 0.01, 0.5, 4);
+                    const antennaMaterial = new THREE.MeshBasicMaterial({ color: 0x333333 });
+                    
+                    const antennaLeft = new THREE.Mesh(antennaGeometry, antennaMaterial);
+                    antennaLeft.position.set(-0.05, 0.3, -0.3);
+                    antennaLeft.rotation.x = -Math.PI / 4;
+                    
+                    const antennaRight = new THREE.Mesh(antennaGeometry, antennaMaterial);
+                    antennaRight.position.set(0.05, 0.3, -0.3);
+                    antennaRight.rotation.x = -Math.PI / 4;
+                    
+                    // Tambahkan titik di ujung antena
+                    const antennaPointGeometry = new THREE.SphereGeometry(0.02, 8, 8);
+                    const antennaPointMaterial = new THREE.MeshBasicMaterial({ color: color });
+                    
+                    const antennaPointLeft = new THREE.Mesh(antennaPointGeometry, antennaPointMaterial);
+                    antennaPointLeft.position.set(0, 0.25, 0);
+                    antennaLeft.add(antennaPointLeft);
+                    
+                    const antennaPointRight = new THREE.Mesh(antennaPointGeometry, antennaPointMaterial);
+                    antennaPointRight.position.set(0, 0.25, 0);
+                    antennaRight.add(antennaPointRight);
+                    
+                    // Gabungkan semua bagian
+                    butterfly.add(wingLeft);
+                    butterfly.add(wingRight);
+                    butterfly.add(body);
+                    butterfly.add(antennaLeft);
+                    butterfly.add(antennaRight);
+                    
+                    // Posisi dan kecepatan acak
+                    butterfly.position.set(
+                        (Math.random() - 0.5) * 20,
+                        (Math.random() - 0.5) * 20,
+                        (Math.random() - 0.5) * 20
+                    );
+                    
+                    // Kecepatan yang lebih bervariasi
+                    butterfly.speed = {
+                        x: (Math.random() - 0.5) * 0.05,
+                        y: (Math.random() - 0.5) * 0.03,
+                        z: (Math.random() - 0.5) * 0.04
+                    };
+                    
+                    butterfly.wingLeft = wingLeft;
+                    butterfly.wingRight = wingRight;
+                    butterfly.index = this.butterflies.length;
+                    
+                    // Tambahkan ke scene dan array
+                    this.butterflyScene.add(butterfly);
+                    this.butterflies.push(butterfly);
+                },
+                showFlowerBloom() {
+                    const bloomContainer = document.getElementById('flowerBloom');
+                    const petalsContainer = bloomContainer.querySelector('.flower-petals');
+                    
+                    // Reset container
+                    petalsContainer.innerHTML = '';
+                    bloomContainer.style.display = 'flex';
+                    
+                    // Buat kelopak bunga
+                    const colors = ['#FF9AA2', '#FFB7B2', '#FFDAC1', '#E2F0CB', '#B5EAD7', '#C7CEEA'];
+                    for (let i = 0; i < 50; i++) {
+                        const petal = document.createElement('div');
+                        const size = Math.random() * 30 + 20;
+                        const color = colors[Math.floor(Math.random() * colors.length)];
+                        
+                        petal.style.position = 'absolute';
+                        petal.style.width = `${size}px`;
+                        petal.style.height = `${size}px`;
+                        petal.style.backgroundColor = color;
+                        petal.style.borderRadius = '50%';
+                        petal.style.opacity = '0';
+                        petal.style.transform = 'scale(0)';
+                        petal.style.transition = 'all 2s ease-out';
+                        
+                        petalsContainer.appendChild(petal);
+                        
+                        // Animasi kelopak
+                        setTimeout(() => {
+                            const angle = Math.random() * Math.PI * 2;
+                            const distance = Math.random() * 300 + 100;
+                            const x = Math.cos(angle) * distance;
+                            const y = Math.sin(angle) * distance;
+                            
+                            petal.style.transform = `translate(${x}px, ${y}px) scale(1) rotate(${Math.random() * 360}deg)`;
+                            petal.style.opacity = '0.8';
+                        }, 10);
+                    }
+                    
+                    // Sembunyikan efek setelah beberapa detik
+                    setTimeout(() => {
+                        bloomContainer.style.display = 'none';
+                    }, 4000);
+                },
+                init3DFlower() {
+                    const canvas = document.querySelector('#flowerCanvas');
+                    const renderer = new THREE.WebGLRenderer({ 
+                        canvas,
+                        alpha: true,
+                        antialias: true
+                    });
+                    
+                    const scene = new THREE.Scene();
+                    const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+                    const geometry = new THREE.BufferGeometry();
+                    
+                    const vertices = [];
+                    const colors = [];
+                    const color = new THREE.Color();
+
+                    for (let i = 0; i < 500; i++) {
+                        const x = Math.random() * 10 - 5;
+                        const y = Math.random() * 10 - 5;
+                        const z = Math.random() * 10 - 5;
+                        
+                        vertices.push(x, y, z);
+                        
+                        color.setHSL(
+                            Math.random() * 0.2 + 0.7, 
+                            Math.random() * 0.2 + 0.7,
+                            Math.random() * 0.2 + 0.7
+                        );
+                        colors.push(color.r, color.g, color.b);
+                    }
+
+                    geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+                    geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+
+                    const material = new THREE.PointsMaterial({ 
+                        size: 0.5,
+                        vertexColors: true,
+                        transparent: true,
+                        opacity: 0.8
+                    });
+
+                    const flower = new THREE.Points(geometry, material);
+                    scene.add(flower);
+
+                    camera.position.z = 15;
+
+                    function animate() {
+                        requestAnimationFrame(animate);
+                        
+                        flower.rotation.x += 0.001;
+                        flower.rotation.y += 0.002;
+                        
+                        const positions = flower.geometry.attributes.position.array;
+                        for (let i = 0; i < positions.length; i += 3) {
+                            positions[i + 1] += Math.sin(Date.now() * 0.001 + i) * 0.01;
+                        }
+                        flower.geometry.attributes.position.needsUpdate = true;
+                        
+                        renderer.setSize(window.innerWidth, window.innerHeight);
+                        renderer.render(scene, camera);
+                    }
+
+                    animate();
+                }
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
